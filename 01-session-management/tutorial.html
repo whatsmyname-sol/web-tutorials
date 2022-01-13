@@ -1,0 +1,730 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2022-01-13 Thu 06:09 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Session Management</title>
+<meta name="author" content="whatsmyname" />
+<meta name="generator" content="Org Mode" />
+<style>
+  #content { max-width: 60em; margin: auto; }
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #e6e6e6;
+    border-radius: 3px;
+    background-color: #f2f2f2;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: auto;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    top: -8px;
+    right: 12px;
+    padding: 3px;
+    color: #555;
+    background-color: #f2f2f299;
+  }
+  pre.src:hover:before { display: inline; margin-top: 14px;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-authinfo::before { content: 'Authinfo'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+</style>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Session Management</h1>
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org6a3d0d3">1. Introduction</a></li>
+<li><a href="#orgb90236d">2. Basic Web Server</a>
+<ul>
+<li><a href="#org35e86b3">2.1. Environment</a></li>
+<li><a href="#org8541b0f">2.2. Web Server with Express</a></li>
+</ul>
+</li>
+<li><a href="#org3cc5a34">3. Sessions</a>
+<ul>
+<li><a href="#org03c4b19">3.1. Environment</a></li>
+<li><a href="#org21d3083">3.2. Basic Sessions</a></li>
+<li><a href="#orgf0f0bc0">3.3. Dynamic Sessions</a></li>
+<li><a href="#orgacbd1f2">3.4. Session Storage with Redis</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org6a3d0d3" class="outline-2">
+<h2 id="org6a3d0d3"><span class="section-number-2">1.</span> Introduction</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+In this tutorial, we'll be creating a web application with the following
+characteristics:
+</p>
+<ul class="org-ul">
+<li>web server using Node.js and Express</li>
+<li>session management using express-session as middleware</li>
+<li>session storage using Redis</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orgb90236d" class="outline-2">
+<h2 id="orgb90236d"><span class="section-number-2">2.</span> Basic Web Server</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+To run this tutorial script, just execute <code>sh webserver.sh</code> in this directory.
+The code has been produced from the current file.
+</p>
+</div>
+
+<div id="outline-container-org35e86b3" class="outline-3">
+<h3 id="org35e86b3"><span class="section-number-3">2.1.</span> Environment</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+We need to set up the server environment first. Make sure that <code>node</code> is
+installed and working.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Testing node: "</span>
+<span style="color: #4f97d7; font-weight: bold;">if </span><span style="color: #4f97d7;">type</span> -P node &gt; /dev/null; <span style="color: #4f97d7; font-weight: bold;">then</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"Node.js seems to be correctly installed!"</span>
+<span style="color: #4f97d7; font-weight: bold;">else</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"Node.js command not found, please ensure it is installed and in your path!"</span>
+    <span style="color: #4f97d7; font-weight: bold;">exit</span> <span style="color: #a45bad;">1</span>
+<span style="color: #4f97d7; font-weight: bold;">fi</span>
+</pre>
+</div>
+
+<p>
+Next, we set up <code>package.json</code> via <code>npm</code>. This file tracks metadata like the
+name of the application, version, git upstream URL, and other stuff like that.
+Most importantly, it tracks the nodejs packages. We don't really care about the
+metadata, so let's just use the default values.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Initializing project: "</span>
+npm init -y &gt;/dev/null
+<span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #4f97d7;">[</span> -f <span style="color: #2d9574;">"package.json"</span> <span style="color: #4f97d7;">]</span>; <span style="color: #4f97d7; font-weight: bold;">then</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"Found package.json!"</span>
+<span style="color: #4f97d7; font-weight: bold;">fi</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org8541b0f" class="outline-3">
+<h3 id="org8541b0f"><span class="section-number-3">2.2.</span> Web Server with Express</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+<code>Express</code> is a Node.js library to manage web servers. A good tutorial starting
+guide can be found here: <a href="https://expressjs.com/en/starter/installing.html">"Getting Started"</a>.
+</p>
+
+<p>
+First, we need to install it.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash">npm install --save express &gt;/dev/null
+
+<span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Installing express: "</span>
+<span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #4f97d7;">[</span> <span style="color: #2d9574;">"$?"</span> -ne <span style="color: #a45bad;">0</span> <span style="color: #4f97d7;">]</span>; <span style="color: #4f97d7; font-weight: bold;">then</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"npm install failed, please check logs!"</span>
+    <span style="color: #4f97d7; font-weight: bold;">exit</span> <span style="color: #a45bad;">1</span>
+<span style="color: #4f97d7; font-weight: bold;">else</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"npm install finished successfully!"</span>
+<span style="color: #4f97d7; font-weight: bold;">fi</span>
+</pre>
+</div>
+
+<p>
+A simple "Hello World" application is quite easy to set up.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-javascript"><span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">express</span> = require<span style="color: #4f97d7;">(</span><span style="color: #2d9574;">'express'</span><span style="color: #4f97d7;">)</span>
+<span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">app</span> = express<span style="color: #4f97d7;">()</span>
+<span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">port</span> = <span style="color: #a45bad;">3000</span>
+
+app.get<span style="color: #4f97d7;">(</span><span style="color: #2d9574;">'/'</span>, <span style="color: #bc6ec5;">(</span>req, res<span style="color: #bc6ec5;">)</span> =&gt; <span style="color: #bc6ec5;">{</span>
+    res.send<span style="color: #2d9574;">(</span><span style="color: #2d9574;">'Hello World!'</span><span style="color: #2d9574;">)</span>
+<span style="color: #bc6ec5;">}</span><span style="color: #4f97d7;">)</span>
+
+app.listen<span style="color: #4f97d7;">(</span>port, <span style="color: #bc6ec5;">()</span> =&gt; <span style="color: #bc6ec5;">{</span>
+    console.log<span style="color: #2d9574;">(</span><span style="color: #2d9574;">`Hello World app listening at http://localhost:${port}`</span><span style="color: #2d9574;">)</span>
+<span style="color: #bc6ec5;">}</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+<p>
+The most important part of that snippet is the <code>app.get</code> function call. In
+general, assuming <code>app</code> is the variable referring to an <code>express</code> object, our
+basic primitive is an <code>app.METHOD(PATH, HANDLER)</code> function, where:
+</p>
+<ul class="org-ul">
+<li><code>METHOD</code> is an HTTP request method, like GET, POST, etc., in lowercase</li>
+<li><code>PATH</code> is the virtual path on the server (like: <code>example.com/PATH</code>)</li>
+<li><code>HANDLER</code> is a function taking in request and response objects</li>
+</ul>
+
+<p>
+We can start this webserver as follows:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash">node hello_world/index.js
+</pre>
+</div>
+
+<p>
+In order to run this in the background, we'll need to wrap this up a bit.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Starting server: "</span>
+node hello_world/index.js &amp; &amp;&gt;/dev/null
+<span style="color: #7590db;">node_pid</span>=<span style="color: #2d9574;">"$!"</span>
+<span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"Started node with PID $node_pid! Please open localhost:3000 in your browser."</span>
+</pre>
+</div>
+
+<p>
+This will start a server listening at port 3000. You can check it is running
+correctly with:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Testing server (sleep 5 seconds): "</span> &amp;&amp; sleep <span style="color: #a45bad;">5</span>
+
+<span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #4f97d7;">[</span> <span style="color: #2d9574;">"$(</span><span style="color: #bc6ec5;">curl</span><span style="color: #2d9574;"> localhost:3000 2&gt;/dev/null)"</span> = <span style="color: #2d9574;">"Hello World!"</span> <span style="color: #4f97d7;">]</span>; <span style="color: #4f97d7; font-weight: bold;">then</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"Server is running correctly!"</span>
+<span style="color: #4f97d7; font-weight: bold;">else</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"Server is not running!"</span>
+<span style="color: #4f97d7; font-weight: bold;">fi</span>
+</pre>
+</div>
+
+<p>
+After we've done, we can quit the node server.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #a45bad;">!</span> <span style="color: #4f97d7;">[</span> -z <span style="color: #2d9574;">"$node_pid"</span> <span style="color: #4f97d7;">]</span>; <span style="color: #4f97d7; font-weight: bold;">then</span>
+    <span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Exit server: Press &lt;enter&gt; to exit... "</span>
+    <span style="color: #4f97d7;">read</span>
+    <span style="color: #4f97d7;">kill</span> $<span style="color: #7590db;">node_pid</span>
+<span style="color: #4f97d7; font-weight: bold;">fi</span>
+</pre>
+</div>
+
+<p>
+More examples can be found on <a href="https://github.com/expressjs/express/tree/master/examples">Github</a>.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org3cc5a34" class="outline-2">
+<h2 id="org3cc5a34"><span class="section-number-2">3.</span> Sessions</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+By session, we mean assigning every user connecting to server with a certain
+session ID which determines their session. Every session can be handled
+differently and can have different data.
+</p>
+
+<p>
+The basic motivation for sessions is: HTTP is a stateless protocol, and in order
+to have state (for example: user accounts, logged in users), we need to maintain
+sessions and associate each request with a session ID.
+</p>
+
+<p>
+The main way to do that is by creating a cookie with a session ID key-value
+pair. In the express framework, we'll use the <code>express-session</code> middleware
+library.
+</p>
+
+<p>
+To run this tutorial, execute <code>sh webserver_sessions.sh</code> in this directory.
+</p>
+</div>
+
+<div id="outline-container-org03c4b19" class="outline-3">
+<h3 id="org03c4b19"><span class="section-number-3">3.1.</span> Environment</h3>
+<div class="outline-text-3" id="text-3-1">
+<p>
+First, we install the required libraries.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash">npm install --save express-session &gt; /dev/null
+
+<span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Installing express-session: "</span>
+<span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #4f97d7;">[</span> <span style="color: #2d9574;">"$?"</span> -ne <span style="color: #a45bad;">0</span> <span style="color: #4f97d7;">]</span>; <span style="color: #4f97d7; font-weight: bold;">then</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"npm install failed, please check logs!"</span>
+    <span style="color: #4f97d7; font-weight: bold;">exit</span> <span style="color: #a45bad;">1</span>
+<span style="color: #4f97d7; font-weight: bold;">else</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"npm install finished successfully!"</span>
+<span style="color: #4f97d7; font-weight: bold;">fi</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org21d3083" class="outline-3">
+<h3 id="org21d3083"><span class="section-number-3">3.2.</span> Basic Sessions</h3>
+<div class="outline-text-3" id="text-3-2">
+<p>
+Let's try to make a simple application which uses sessions.
+</p>
+
+<p>
+First, the basic constants. Note that we now have <code>session</code> as well.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-javascript"><span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">express</span> = require<span style="color: #4f97d7;">(</span><span style="color: #2d9574;">'express'</span><span style="color: #4f97d7;">)</span>
+<span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">session</span> = require<span style="color: #4f97d7;">(</span><span style="color: #2d9574;">'express-session'</span><span style="color: #4f97d7;">)</span>
+
+<span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">app</span> = express<span style="color: #4f97d7;">()</span>
+<span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">port</span> = <span style="color: #a45bad;">3000</span>
+</pre>
+</div>
+
+<p>
+Now we set some properties for <code>express-session</code>. The main property is the
+<code>secret</code> string, which will be used to sign session IDs. Use a strong key and do
+not leak it!
+</p>
+
+<p>
+The other properties are as follows:
+</p>
+<ul class="org-ul">
+<li>maxAge of cookie: how long a session lasts on inactivity</li>
+<li>resave: force update of session data on all requests, not needed</li>
+<li>saveUnitialized: save sessions even if no data is stored with it, not needed,
+but unused here</li>
+<li>rolling: force update of session cookie and expiration on all requests, set to
+true</li>
+</ul>
+
+<p>
+The <code>resave</code> and <code>rolling</code> properties can look very similar, but be careful. The
+<code>rolling</code> property makes sure the client-side expiry is also kept up-to-date,
+and the <code>resave</code> forces an update of the server-side expiry. The server-side
+expiry is always greater or equal to the client-side expiry, but not necessarily
+equal. Whenever you modify the <code>req.session</code> variable in any sense, the
+client-side expiry will also be updated.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-javascript"><span style="color: #4f97d7; font-weight: bold;">var</span> <span style="color: #7590db;">session_options</span> = <span style="color: #4f97d7;">{</span>
+    secret: <span style="color: #2d9574;">"some_randomly_generated_string_here!"</span>,
+    cookie: <span style="color: #bc6ec5;">{</span>
+        secure: <span style="color: #2d9574;">"auto"</span>,
+        maxAge: <span style="color: #a45bad;">10000</span>
+    <span style="color: #bc6ec5;">}</span>,
+    resave: <span style="color: #a45bad;">false</span>,
+    saveUninitialized: <span style="color: #a45bad;">false</span>,
+    rolling: <span style="color: #a45bad;">false</span>,
+<span style="color: #4f97d7;">}</span>
+
+app.use<span style="color: #4f97d7;">(</span>session<span style="color: #bc6ec5;">(</span>session_options<span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+<p>
+Now we can start returning some information about the session.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-javascript">app.get<span style="color: #4f97d7;">(</span><span style="color: #2d9574;">'/'</span>, <span style="color: #bc6ec5;">(</span>req, res<span style="color: #bc6ec5;">)</span> =&gt; <span style="color: #bc6ec5;">{</span>
+    <span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #2d9574;">(</span>!req.session.initialized<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">{</span>
+        req.session.initialized = <span style="color: #a45bad;">0</span>
+        res.write<span style="color: #67b11d;">(</span><span style="color: #2d9574;">'New session_id created!\n'</span><span style="color: #67b11d;">)</span>
+    <span style="color: #2d9574;">}</span>
+
+    <span style="color: #2aa1ae; background-color: #292e34;">// </span><span style="color: #2aa1ae; background-color: #292e34;">if you don't do this, client-side cookies will expire too soon!</span>
+    <span style="color: #2aa1ae; background-color: #292e34;">// </span><span style="color: #2aa1ae; background-color: #292e34;">basically, you need any change to req.session to refresh cookies client-side.</span>
+    req.session.initialized++ 
+
+    res.write<span style="color: #2d9574;">(</span><span style="color: #2d9574;">'session_id: '</span> + req.session.id + <span style="color: #2d9574;">'\n'</span><span style="color: #2d9574;">)</span>
+    res.write<span style="color: #2d9574;">(</span><span style="color: #2d9574;">'expires in: '</span> + <span style="color: #67b11d;">(</span>req.session.cookie.maxAge / <span style="color: #a45bad;">1000</span><span style="color: #67b11d;">)</span> + <span style="color: #2d9574;">'s\n'</span><span style="color: #2d9574;">)</span>
+    res.write<span style="color: #2d9574;">(</span><span style="color: #2d9574;">'expires at: '</span> + <span style="color: #67b11d;">(</span>req.session.cookie.expires<span style="color: #67b11d;">)</span> + <span style="color: #2d9574;">'\n'</span><span style="color: #2d9574;">)</span>
+
+    res.end<span style="color: #2d9574;">()</span>
+<span style="color: #bc6ec5;">}</span><span style="color: #4f97d7;">)</span>
+
+app.listen<span style="color: #4f97d7;">(</span>port, <span style="color: #bc6ec5;">()</span> =&gt; <span style="color: #bc6ec5;">{</span>
+    console.log<span style="color: #2d9574;">(</span><span style="color: #2d9574;">`Static Sessions app listening at http://localhost:${port}`</span><span style="color: #2d9574;">)</span>
+<span style="color: #bc6ec5;">}</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+<p>
+Let's start the server.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Starting server: "</span>
+
+node sessions/01-static.js &amp; &amp;&gt;/dev/null
+<span style="color: #7590db;">node_pid</span>=<span style="color: #2d9574;">"$!"</span>
+
+<span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #a45bad;">!</span> <span style="color: #4f97d7;">[</span> -z <span style="color: #2d9574;">"$node_pid"</span> <span style="color: #4f97d7;">]</span>; <span style="color: #4f97d7; font-weight: bold;">then</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"Started node with PID $node_pid! Please open localhost:3000 in your browser."</span>
+    <span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Exit server: Press &lt;enter&gt; to exit... "</span>
+    <span style="color: #4f97d7;">read</span>
+    <span style="color: #4f97d7;">kill</span> $<span style="color: #7590db;">node_pid</span>
+<span style="color: #4f97d7; font-weight: bold;">else</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"Could not start server!"</span>
+    <span style="color: #4f97d7; font-weight: bold;">exit</span> <span style="color: #a45bad;">1</span>
+<span style="color: #4f97d7; font-weight: bold;">fi</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgf0f0bc0" class="outline-3">
+<h3 id="orgf0f0bc0"><span class="section-number-3">3.3.</span> Dynamic Sessions</h3>
+<div class="outline-text-3" id="text-3-3">
+<p>
+Let's try and make the session management a little more dynamic.
+</p>
+
+<p>
+This is all basic stuff:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-javascript"><span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">express</span> = require<span style="color: #4f97d7;">(</span><span style="color: #2d9574;">'express'</span><span style="color: #4f97d7;">)</span>
+<span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">session</span> = require<span style="color: #4f97d7;">(</span><span style="color: #2d9574;">'express-session'</span><span style="color: #4f97d7;">)</span>
+
+<span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">app</span> = express<span style="color: #4f97d7;">()</span>
+<span style="color: #4f97d7; font-weight: bold;">const</span> <span style="color: #7590db;">port</span> = <span style="color: #a45bad;">3000</span>
+
+<span style="color: #4f97d7; font-weight: bold;">var</span> <span style="color: #7590db;">session_options</span> = <span style="color: #4f97d7;">{</span>
+    secret: <span style="color: #2d9574;">"some_randomly_generated_string_here!"</span>,
+    cookie: <span style="color: #bc6ec5;">{</span>
+        secure: <span style="color: #2d9574;">"auto"</span>,
+        maxAge: <span style="color: #a45bad;">15000</span>
+    <span style="color: #bc6ec5;">}</span>,
+    resave: <span style="color: #a45bad;">false</span>,
+    saveUninitialized: <span style="color: #a45bad;">false</span>,
+    rolling: <span style="color: #a45bad;">false</span>,
+<span style="color: #4f97d7;">}</span>
+
+app.use<span style="color: #4f97d7;">(</span>session<span style="color: #bc6ec5;">(</span>session_options<span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+<p>
+The GET response is a bit more involved now, but not too much. We check whether
+we've initialized the session or not, and depending on that we show two
+different views.
+</p>
+
+<p>
+If it's uninitialized, we have a button to "log in". If we're initialized, we
+show session ID and seconds to expiry, and buttons to "refresh expiry" and "log
+out".
+</p>
+
+<div class="org-src-container">
+<pre class="src src-javascript">app.get<span style="color: #4f97d7;">(</span><span style="color: #2d9574;">'/'</span>, <span style="color: #bc6ec5;">(</span>req, res<span style="color: #bc6ec5;">)</span> =&gt; <span style="color: #bc6ec5;">{</span>
+    res.setHeader<span style="color: #2d9574;">(</span><span style="color: #2d9574;">'Content-Type'</span>, <span style="color: #2d9574;">'text/html'</span><span style="color: #2d9574;">)</span>
+    <span style="color: #4f97d7; font-weight: bold;">var</span> <span style="color: #7590db;">response_html</span> =
+        <span style="color: #2d9574;">"&lt;h1&gt;Hello World!&lt;/h1&gt;"</span> +
+        <span style="color: #2d9574;">"&lt;hr&gt;"</span>
+    <span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #2d9574;">(</span>!req.session.initialized<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">{</span>
+        response_html +=
+            <span style="color: #2d9574;">"&lt;p&gt;You are logged out!&lt;/p&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;form action='/' method='post'&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;input type='submit' name='login' value='LOG IN'/&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;/form&gt;"</span>
+    <span style="color: #2d9574;">}</span> <span style="color: #4f97d7; font-weight: bold;">else</span> <span style="color: #2d9574;">{</span>
+        <span style="color: #4f97d7; font-weight: bold;">var</span> <span style="color: #7590db;">ms_to_expiry</span> = req.session.original_expiry - Date.now<span style="color: #67b11d;">()</span>
+        response_html +=
+            <span style="color: #2d9574;">"&lt;p&gt;You are logged in!&lt;/p&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;ul&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;li&gt;session_id: "</span> + req.session.id + <span style="color: #2d9574;">"&lt;/li&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;li&gt;expiry: "</span> + ms_to_expiry/<span style="color: #a45bad;">1000</span> + <span style="color: #2d9574;">"s ("</span> + req.session.original_expiry_str + <span style="color: #2d9574;">") &lt;/li&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;/ul&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;form action='/' method='post'&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;input type='submit' value='REFRESH PAGE'/&gt;&lt;/br&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;input type='submit' name='refresh' value='REFRESH EXPIRY'/&gt;&lt;/br&gt;&lt;/br&gt;&lt;/br&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;input type='submit' name='logout' value='LOG OUT'/&gt;"</span> +
+            <span style="color: #2d9574;">"&lt;/form&gt;"</span>
+    <span style="color: #2d9574;">}</span>
+
+    res.write<span style="color: #2d9574;">(</span>response_html<span style="color: #2d9574;">)</span>
+    res.end<span style="color: #2d9574;">()</span>
+<span style="color: #bc6ec5;">}</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+<p>
+This is where we actually handle the POST request. We need certain middleware to
+parse POST bodies, which is in the first two lines.
+</p>
+
+<p>
+Depending on the POST data &#x2013; which is determined by the button <code>name</code> above &#x2013;
+we have some logic to handle log in and log out, and refreshing expiry time.
+Remember that client-side cookie and expiry time would be updated only when the
+session value (aka hash) changes.
+</p>
+
+<p>
+Since server-side expiry time is always updated after requests, we store the
+original expiry time in the session data. Date handling is ugly.
+</p>
+
+<p>
+Finally, we redirect back. This is a <a href="https://en.wikipedia.org/wiki/Post/Redirect/Get">Post/Redirect/Get</a> pattern.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-javascript">app.use<span style="color: #4f97d7;">(</span>express.json<span style="color: #bc6ec5;">()</span><span style="color: #4f97d7;">)</span> <span style="color: #2aa1ae; background-color: #292e34;">// </span><span style="color: #2aa1ae; background-color: #292e34;">for parsing application/json</span>
+app.use<span style="color: #4f97d7;">(</span>express.urlencoded<span style="color: #bc6ec5;">(</span><span style="color: #2d9574;">{</span> extended: <span style="color: #a45bad;">true</span> <span style="color: #2d9574;">}</span><span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span> <span style="color: #2aa1ae; background-color: #292e34;">// </span><span style="color: #2aa1ae; background-color: #292e34;">for parsing application/x-www-form-urlencoded</span>
+
+app.post<span style="color: #4f97d7;">(</span><span style="color: #2d9574;">'/'</span>, <span style="color: #bc6ec5;">(</span>req, res<span style="color: #bc6ec5;">)</span> =&gt; <span style="color: #bc6ec5;">{</span>
+    <span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #2d9574;">(</span>req.body.login<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">{</span>
+        <span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #67b11d;">(</span>req.session.initialized<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">{</span>
+            console.log<span style="color: #b1951d;">(</span><span style="color: #2d9574;">"ERROR: login after being initialized!"</span><span style="color: #b1951d;">)</span>
+        <span style="color: #67b11d;">}</span>
+        req.session.initialized = <span style="color: #a45bad;">true</span>
+        req.session.original_expiry = Date.parse<span style="color: #67b11d;">(</span>req.session.cookie.expires<span style="color: #67b11d;">)</span>
+        req.session.original_expiry_str = <span style="color: #4f97d7; font-weight: bold;">new</span> <span style="color: #ce537a; font-weight: bold;">Date</span><span style="color: #67b11d;">(</span>req.session.original_expiry<span style="color: #67b11d;">)</span>.toLocaleString<span style="color: #67b11d;">(</span><span style="color: #2d9574;">"en-GB"</span><span style="color: #67b11d;">)</span>
+        req.session.refresh_flag = <span style="color: #a45bad;">false</span>
+    <span style="color: #2d9574;">}</span> <span style="color: #4f97d7; font-weight: bold;">else</span> <span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #2d9574;">(</span>req.body.logout<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">{</span>
+        req.session.regenerate<span style="color: #67b11d;">(</span><span style="color: #b1951d;">(</span>err<span style="color: #b1951d;">)</span> =&gt; <span style="color: #b1951d;">{</span> <span style="color: #b1951d;">}</span> <span style="color: #67b11d;">)</span>
+    <span style="color: #2d9574;">}</span> <span style="color: #4f97d7; font-weight: bold;">else</span> <span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #2d9574;">(</span>req.body.refresh<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">{</span>
+        req.session.refresh_flag = !req.session.refresh_flag
+        req.session.original_expiry = Date.now<span style="color: #67b11d;">()</span> + req.session.cookie.originalMaxAge
+        req.session.original_expiry_str = <span style="color: #4f97d7; font-weight: bold;">new</span> <span style="color: #ce537a; font-weight: bold;">Date</span><span style="color: #67b11d;">(</span>req.session.original_expiry<span style="color: #67b11d;">)</span>.toLocaleString<span style="color: #67b11d;">(</span><span style="color: #2d9574;">"en-GB"</span><span style="color: #67b11d;">)</span>
+    <span style="color: #2d9574;">}</span>
+
+    res.redirect<span style="color: #2d9574;">(</span><span style="color: #2d9574;">'/'</span><span style="color: #2d9574;">)</span>
+    res.end<span style="color: #2d9574;">()</span>
+<span style="color: #bc6ec5;">}</span><span style="color: #4f97d7;">)</span>
+
+app.listen<span style="color: #4f97d7;">(</span>port, <span style="color: #bc6ec5;">()</span> =&gt; <span style="color: #bc6ec5;">{</span>
+    console.log<span style="color: #2d9574;">(</span><span style="color: #2d9574;">`Dynamic Sessions app listening at http://localhost:${port}`</span><span style="color: #2d9574;">)</span>
+<span style="color: #bc6ec5;">}</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+<p>
+Again, let's start the server.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Starting server: "</span>
+
+node sessions/02-dynamic.js &amp; &amp;&gt;/dev/null
+<span style="color: #7590db;">node_pid</span>=<span style="color: #2d9574;">"$!"</span>
+
+<span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #a45bad;">!</span> <span style="color: #4f97d7;">[</span> -z <span style="color: #2d9574;">"$node_pid"</span> <span style="color: #4f97d7;">]</span>; <span style="color: #4f97d7; font-weight: bold;">then</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"Started node with PID $node_pid! Please open localhost:3000 in your browser."</span>
+    <span style="color: #4f97d7;">echo</span> -n <span style="color: #2d9574;">"Exit server: Press &lt;enter&gt; to exit... "</span>
+    <span style="color: #4f97d7;">read</span>
+    <span style="color: #4f97d7;">kill</span> $<span style="color: #7590db;">node_pid</span>
+<span style="color: #4f97d7; font-weight: bold;">else</span>
+    <span style="color: #4f97d7;">echo</span> <span style="color: #2d9574;">"Could not start server!"</span>
+    <span style="color: #4f97d7; font-weight: bold;">exit</span> <span style="color: #a45bad;">1</span>
+<span style="color: #4f97d7; font-weight: bold;">fi</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgacbd1f2" class="outline-3">
+<h3 id="orgacbd1f2"><span class="section-number-3">3.4.</span> Session Storage with Redis</h3>
+<div class="outline-text-3" id="text-3-4">
+<p>
+TODO&#x2026;
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="date">Date: today</p>
+<p class="author">Author: whatsmyname</p>
+<p class="date">Created: 2022-01-13 Thu 06:09</p>
+<p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
