@@ -2,6 +2,7 @@
 
 01-session-management/redis/
 01-session-management/dump.rdb
+02-discord-oauth/config.json
 
 # From: https://raw.githubusercontent.com/github/gitignore/main/Node.gitignore
 

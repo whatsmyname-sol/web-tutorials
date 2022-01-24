@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Discord OAuth2 Implicit Grant Flow</title>
+  </head>
+  <body>
+    <h1>Discord User Information</h1>
+    <hr>
+    <div id="login-error" style="display: none; border: solid; margin-top: 10px; margin-bottom: 10px">
+    </div>
+    <div id="login-status">
+      <p>Checking status...</p>
+    </div>
+    <% if (locals.oauthURL) { %>
+    <div id="login" style="display: none">
+      <button type="button" onclick="location.href='<%= oauthURL %>'">
+        Log in to Discord!
+      </button>
+    </div>
+    <% } else { %>
+    <p>Discord OAuth2 URL not present!</p>
+    <% } %>
+    <script>
+    window.onload = () => {
+      const params = new URLSearchParams(window.location.hash.slice(1))
+      
+      var [accessToken, tokenType, state] = [params.get('access_token'), params.get('token_type'), params.get('state')];
+      var [error, errorDescription] = [params.get('error'), params.get('error_description')]
+      let randomString = null
+      
+      if (!localStorage.getItem('oauth-state')) {
+        var x = new Uint8Array(14)
+        crypto.getRandomValues(x)
+        randomString = btoa(x)
+        localStorage.setItem('oauth-state', randomString)
+      } else {
+        randomString = localStorage.getItem('oauth-state')
+      }
+      
+      var button = document.getElementById('login').children[0]
+      var oauthURL = '<%= oauthURL %>'.replaceAll('&amp;', '&') + `&state=${encodeURIComponent(randomString)}`
+      button.onclick = () => location.href = oauthURL
+      if (accessToken) {
+          if (randomString != decodeURIComponent(state)) {
+              error = "state does not match"
+              errorDescription = "The random state stored in local storage does not match the returned state"
+          } else {
+              localStorage.setItem('oauth-token', accessToken)
+          }
+      }
+      accessToken = localStorage.getItem('oauth-token')
+      if (accessToken) {
+          localStorage.removeItem('oauth-state')
+      
+          fetch('https://discord.com/api/users/@me', {
+              headers: {
+                  authorization: `Bearer ${accessToken}`,
+              },
+          })
+              .then(res => res.json())
+              .then(res => {
+                  const { username, discriminator } = res
+      
+                  if (username && discriminator) {
+                      var div = document.getElementById('login')
+                      div.style.display = 'none'
+      
+                      var div = document.getElementById('login-status')
+                      div.children[0].innerHTML = `You are <b>logged in</b> as ${username}#${discriminator}`
+                      var button = document.createElement('button')
+                      button.innerText = "Log out!"
+                      button.onclick = () => {
+                          localStorage.removeItem('oauth-token')
+                          location.href = window.location
+                      }
+                      div.append(button)
+                  } else {
+                      localStorage.removeItem('oauth-token')
+      
+                      var div = document.getElementById('login-status')
+                      div.children[0].innerHTML = `You are <b>not</b> logged in because your access token expired!`
+      
+                      var div = document.getElementById('login')
+                      div.style.display = 'block'
+                  }
+              })
+              .catch(console.error)
+      } else {
+          var div = document.getElementById('login-status')
+          div.children[0].innerHTML = `You are <b>not</b> logged in!`
+      
+          var div = document.getElementById('login')
+          div.style.display = 'block'
+      }
+      var div = document.getElementById('login-error')
+      if (error) {
+          var p = document.createElement('p')
+          p.innerHTML = "Login attempt failed!"
+          p.style.margin = '5px'
+          div.append(p)
+          var p = document.createElement('p')
+          p.innerHTML = `<ul>`+
+              `<li><b>error: </b>${error}</li>` +
+              `<li><b>error_description: </b>${errorDescription}` +
+              `</ul>`
+          p.style.margin = '5px'
+          div.append(p)
+          div.style.display = 'inline-block'
+      } else {
+          div.style.display = 'none'
+          div.innerHTML = ''
+      }
+      // reference: https://stackoverflow.com/questions/1397329/how-to-remove-the-hash-from-window-location-url-with-javascript-without-page-r/5298684#5298684
+      function removeHash () {
+          var scrollV, scrollH, loc = window.location;
+          if ("pushState" in history)
+              history.pushState("", document.title, loc.pathname + loc.search);
+          else {
+              // Prevent scrolling by storing the page's current scroll offset
+              scrollV = document.body.scrollTop;
+              scrollH = document.body.scrollLeft;
+      
+              loc.hash = "";
+      
+              // Restore the scroll offset, should be flicker free
+              document.body.scrollTop = scrollV;
+              document.body.scrollLeft = scrollH;
+          }
+      }
+      
+      removeHash()
+    }
+    </script>
+  </body>
+</html>

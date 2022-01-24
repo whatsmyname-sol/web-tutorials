@@ -1,0 +1,435 @@
+#+title: Discord OAuth
+#+author: whatsmyname
+#+date: today
+
+* Introduction
+
+Prerequisites:
+ - 01-session-management
+
+In this tutorial, we'll set up Discord OAuth with server-side storage of access
+codes, which will allow us to refresh access tokens.
+ - setting up Discord application
+ - getting access token (implicit grant flow)
+ - getting access code and requesting for access tokens (authorization code grant flow)
+
+Some references which are helpful:
+ - [[https://tools.ietf.org/html/rfc6749][OAuth RFC]]
+ - [[https://discord.com/developers/docs/topics/oauth2][Discord Docs for OAuth2]]
+ - [[https://discordjs.guide/oauth2/][discordjs tutorial (primary reference)]]
+
+
+* Discord Applications
+:PROPERTIES:
+:header-args: :results output verbatim
+:header-args+: :tangle oauth_discord.sh :mkdirp yes
+:END:
+
+The first thing we need to do is set up a Discord application. It's very easy:
+ 1. open the [[https://discord.com/developers/applications][Discord developer portal]] and log in
+ 2. create a new application by clicking on "New Application"
+ 3. name the application and click the "Create" button
+
+On this page, you can configure the application's name, description, icon, and
+other cosmetic information.
+
+We need two important pieces of information for OAuth to work: ~Client ID~ and
+~Client Secret~. You can find these by navigating to "OAuth2" through the
+sidebar and clicking the respective "Copy" buttons. Keep these two strings safe;
+these are basically passwords!
+
+Now we need to make a ~config.json~ file in the base directory to hold these
+pieces of information. Replace the placeholders in ~config.example.json~ by the
+actual values and save it as ~config.json~!
+
+#+begin_src json :tangle config.example.json
+  {
+      "clientId": "",
+      "clientSecret": ""
+  }
+#+end_src
+
+Some sanity checks for the scripts. Ignore keys that have not been introduced
+yet.
+
+#+begin_src bash
+  if ! [ -f "config.json" ]; then
+      echo "Please create the config.json file using config.example.json file!" && exit 1
+  fi
+  key='clientId' && if [[ $(cat config.json | jq --raw-output ".$key // empty") = "" ]] ; then
+      echo "Please set '$key' in config.json!" && exit 1
+  fi
+  key='clientSecret' && if [[ $(cat config.json | jq --raw-output ".$key // empty") = "" ]] ; then
+      echo "Please set '$key' in config.json!" && exit 1
+  fi
+  echo "Configuration file found"
+#+end_src
+
+The ~OAuth2~ page that we are on is pretty useful throughout the following
+sections, so we'll assume this page is always open.
+
+#+begin_src bash
+  echo "Run oauth_implicit.sh next!"
+#+end_src
+
+* Implicit Grant Flow
+:PROPERTIES:
+:header-args: :results output verbatim
+:header-args+: :tangle oauth_implicit.sh :mkdirp yes
+:END:
+
+The first thing we need to do is set up a basic webserver. This material is
+copied from the ~01-session-management~ prerequisite and won't be particularly
+explained.
+
+In this version, we don't track the access tokens via the backend: we only fetch
+and maintain them client-side. This means that the client will be logged out
+after a certain amount of time (or if they refresh).
+
+** Discord OAuth2 URL
+
+The first thing we need to do is set up the Discord OAuth2 URL. The URL takes as
+parameters:
+ - client ID
+ - redirect URL
+ - response type: either 'token or 'code, for implicit grant flow and
+   authorization code grant flow respectively
+ - scope: the permissions required
+ - state: will be discussed later
+
+The redirect URL has to be registered with Discord, and we must pass the exact
+same string in the query.
+
+To register a URL:
+ - go to the OAuth2 page
+ - add URL under the "Redirects" heading
+
+For this app, you'll need to add ~http://localhost:3000/~ here. If you're using
+a different port or if you're hosting it somewhere else, change this (and the
+source codes) accordingly.
+
+The scope strings can be found on the "URL Generator" page. For their precise
+meanings, check the [[https://discord.com/developers/docs/topics/oauth2#shared-resources-oauth2-scopes][documentation]].
+
+** Webserver
+
+First we install the webserver package. We won't even be using sessions here.
+
+#+begin_src bash
+  npm install express
+#+end_src
+
+#+RESULTS:
+:
+: up to date, audited 78 packages in 981ms
+:
+: 4 packages are looking for funding
+:   run `npm fund` for details
+:
+: found 0 vulnerabilities
+
+Next, the actual webserver. The only interesting part is building the Discord
+OAuth2 URL using the parameters. Remember that 'token' is the response type for
+the implicit grant flow.
+
+#+begin_src javascript :tangle src/implicit/server.js :eval no
+  const express = require('express')
+
+  const app = express()
+  const port = 3000
+
+  function encodeQueryData(data) {
+      const ret = [];
+      for (let d in data)
+          ret.push(encodeURIComponent(d) + '=' + encodeURIComponent(data[d]));
+      return ret.join('&');
+  }
+
+  const { clientId } = require('../../config.json')
+  const oauthParameters = {
+      client_id: clientId,
+      redirect_uri: `http://localhost:${port}/`,
+      response_type: 'token',
+      scope: ['identify', 'email', 'guilds'].join(' '),
+  }
+  const oauthURL = `https://discord.com/api/oauth2/authorize?${encodeQueryData(oauthParameters)}`
+#+end_src
+
+Let us actually serve a simple HTML starting page. Here we actually need the
+Discord OAuth2 URL somehow, so we're going to resort to [[https://ejs.co/][EJS]] templates.
+
+#+begin_src bash
+  npm install ejs
+#+end_src
+
+#+RESULTS:
+:
+: added 15 packages, and audited 93 packages in 1s
+:
+: 4 packages are looking for funding
+:   run `npm fund` for details
+:
+: found 0 vulnerabilities
+
+Here is about the most basic file you could serve. The "index_body" placeholder
+will be filled up later.
+
+#+begin_src html :tangle src/implicit/views/index.ejs :eval no :noweb tangle
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <title>Discord OAuth2 Implicit Grant Flow</title>
+    </head>
+    <body>
+      <h1>Discord User Information</h1>
+      <hr>
+      <<index-body>>
+    </body>
+  </html>
+#+end_src
+
+Let us actually compile and serve it via our webserver, and alongside pass the
+required URL to the template.
+
+#+begin_src javascript :tangle src/implicit/server.js :eval no
+  app.set('view engine', 'ejs')
+  app.set('views', __dirname + '/views')
+
+  app.get('/', (req, res) => {
+      res.render('index', { oauthURL: oauthURL })
+  })
+
+  app.listen(port, () => {
+      console.log(`Implicit Grant Flow app listening at http://localhost:${port}`)
+      console.log(`OAuth2 URL is ${oauthURL}`)
+  })
+#+end_src
+
+You can check if this is working with:
+
+#+begin_src bash :tangle no
+  node src/implicit/server.js
+#+end_src
+
+** Login Page
+:PROPERTIES:
+:header-args: :tangle no :eval no
+:END:
+
+Now let's build a basic login page. First, a basic link to the Discord OAuth2
+portal.
+
+#+name: index-body-login
+#+begin_src html
+  <div id="login-status">
+    <p>Checking status...</p>
+  </div>
+  <% if (locals.oauthURL) { %>
+  <div id="login" style="display: none">
+    <button type="button" onclick="location.href='<%= oauthURL %>'">
+      Log in to Discord!
+    </button>
+  </div>
+  <% } else { %>
+  <p>Discord OAuth2 URL not present!</p>
+  <% } %>
+#+end_src
+
+Let's have a small element in case the login fails.
+
+#+name: index-body-login-error
+#+begin_src html
+  <div id="login-error" style="display: none; border: solid; margin-top: 10px; margin-bottom: 10px">
+  </div>
+#+end_src
+
+Now we come to the main logic. First we decode the URL that we start with.
+
+#+name: index-body-script-url
+#+begin_src javascript
+  const params = new URLSearchParams(window.location.hash.slice(1))
+
+  var [accessToken, tokenType, state] = [params.get('access_token'), params.get('token_type'), params.get('state')];
+  var [error, errorDescription] = [params.get('error'), params.get('error_description')]
+#+end_src
+
+It's time to talk about the ~state~ parameter in the OAuth URL. Discord allows
+you to pass a random string as the state parameter, which it will return
+alongside the access token. You can use this to determine if it was actually you
+that directed the user to that URL, instead of some third-party.
+
+#+name: index-body-script-state
+#+begin_src javascript
+  let randomString = null
+
+  if (!localStorage.getItem('oauth-state')) {
+    var x = new Uint8Array(14)
+    crypto.getRandomValues(x)
+    randomString = btoa(x)
+    localStorage.setItem('oauth-state', randomString)
+  } else {
+    randomString = localStorage.getItem('oauth-state')
+  }
+
+  var button = document.getElementById('login').children[0]
+  var oauthURL = '<%= oauthURL %>'.replaceAll('&amp;', '&') + `&state=${encodeURIComponent(randomString)}`
+  button.onclick = () => location.href = oauthURL
+#+end_src
+
+Now comes the time to actually deal with the Discord access token that we
+receive.
+
+#+name: index-body-script-token
+#+begin_src javascript
+  if (accessToken) {
+      if (randomString != decodeURIComponent(state)) {
+          error = "state does not match"
+          errorDescription = "The random state stored in local storage does not match the returned state"
+      } else {
+          localStorage.setItem('oauth-token', accessToken)
+      }
+  }
+#+end_src
+
+Now, if we find an access token somewhere we can display some data.
+
+#+name: index-body-script-token-data
+#+begin_src javascript
+  accessToken = localStorage.getItem('oauth-token')
+  if (accessToken) {
+      localStorage.removeItem('oauth-state')
+
+      fetch('https://discord.com/api/users/@me', {
+          headers: {
+              authorization: `Bearer ${accessToken}`,
+          },
+      })
+          .then(res => res.json())
+          .then(res => {
+              const { username, discriminator } = res
+
+              if (username && discriminator) {
+                  var div = document.getElementById('login')
+                  div.style.display = 'none'
+
+                  var div = document.getElementById('login-status')
+                  div.children[0].innerHTML = `You are <b>logged in</b> as ${username}#${discriminator}`
+                  var button = document.createElement('button')
+                  button.innerText = "Log out!"
+                  button.onclick = () => {
+                      localStorage.removeItem('oauth-token')
+                      location.href = window.location
+                  }
+                  div.append(button)
+              } else {
+                  localStorage.removeItem('oauth-token')
+
+                  var div = document.getElementById('login-status')
+                  div.children[0].innerHTML = `You are <b>not</b> logged in because your access token expired!`
+
+                  var div = document.getElementById('login')
+                  div.style.display = 'block'
+              }
+          })
+          .catch(console.error)
+  } else {
+      var div = document.getElementById('login-status')
+      div.children[0].innerHTML = `You are <b>not</b> logged in!`
+
+      var div = document.getElementById('login')
+      div.style.display = 'block'
+  }
+#+end_src
+
+Let us also display the errors.
+
+#+name: index-body-script-error
+#+begin_src javascript
+  var div = document.getElementById('login-error')
+  if (error) {
+      var p = document.createElement('p')
+      p.innerHTML = "Login attempt failed!"
+      p.style.margin = '5px'
+      div.append(p)
+      var p = document.createElement('p')
+      p.innerHTML = `<ul>`+
+          `<li><b>error: </b>${error}</li>` +
+          `<li><b>error_description: </b>${errorDescription}` +
+          `</ul>`
+      p.style.margin = '5px'
+      div.append(p)
+      div.style.display = 'inline-block'
+  } else {
+      div.style.display = 'none'
+      div.innerHTML = ''
+  }
+#+end_src
+
+To make the URL cleaner, we can also remove the string after the hash.
+
+#+name: index-body-script-hash
+#+begin_src javascript
+  // reference: https://stackoverflow.com/questions/1397329/how-to-remove-the-hash-from-window-location-url-with-javascript-without-page-r/5298684#5298684
+  function removeHash () {
+      var scrollV, scrollH, loc = window.location;
+      if ("pushState" in history)
+          history.pushState("", document.title, loc.pathname + loc.search);
+      else {
+          // Prevent scrolling by storing the page's current scroll offset
+          scrollV = document.body.scrollTop;
+          scrollH = document.body.scrollLeft;
+
+          loc.hash = "";
+
+          // Restore the scroll offset, should be flicker free
+          document.body.scrollTop = scrollV;
+          document.body.scrollLeft = scrollH;
+      }
+  }
+
+  removeHash()
+#+end_src
+
+Finally, we compile all these bits and pieces together.
+
+#+name: index-body-script
+#+begin_src :eval yes :noweb yes
+  <script>
+  window.onload = () => {
+    <<index-body-script-url>>
+    <<index-body-script-state>>
+    <<index-body-script-token>>
+    <<index-body-script-token-data>>
+    <<index-body-script-error>>
+    <<index-body-script-hash>>
+  }
+  </script>
+#+end_src
+
+#+name: index-body
+#+begin_src :eval yes :noweb yes
+  <<index-body-login-error>>
+  <<index-body-login>>
+  <<index-body-script>>
+#+end_src
+
+** Running the server
+
+Finally, the server.
+
+#+begin_src bash :eval no
+  echo -n "Starting server: "
+
+  node src/implicit/server.js & &>/dev/null
+  node_pid="$!"
+
+  if ! [ -z "$node_pid" ]; then
+      echo "Started node with PID $node_pid! Please open localhost:3000 in your browser."
+      echo -n "Exit server: Press <enter> to exit... "
+      read
+      kill $node_pid
+  else
+      echo "Could not start server!"
+      exit 1
+  fi
+#+end_src
