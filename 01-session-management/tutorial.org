@@ -241,7 +241,7 @@ Now we can start returning some information about the session.
 
       // if you don't do this, client-side cookies will expire too soon!
       // basically, you need any change to req.session to refresh cookies client-side.
-      req.session.initialized++ 
+      req.session.initialized++
 
       res.write('session_id: ' + req.session.id + '\n')
       res.write('expires in: ' + (req.session.cookie.maxAge / 1000) + 's\n')
@@ -403,6 +403,237 @@ Again, let's start the server.
   fi
 #+end_src
 
-** Session Storage with Redis
+* Session Storage with Redis
+:PROPERTIES:
+:header-args: :results output verbatim
+:header-args+: :tangle webserver_sessions_redis.sh :mkdirp yes
+:END:
 
-TODO...
+** Redis
+
+First, we need to install the ~redis~ server somewhere. Let's do this in the
+~./redis~ directory.
+
+We're going to build ~redis~ from its source code. There is a special URL which
+always links to the latest version of the server, which is quite helpful.
+
+#+begin_src bash
+  if ! [[ -d "redis" && -x "redis/redis-server" && -x "redis/redis-cli" ]]; then
+      mkdir redis &> /dev/null
+      cd redis || exit 1
+
+      # Download
+      echo -n "Downloading Redis: "
+      wget -q 'http://download.redis.io/redis-stable.tar.gz'
+      tar xaf redis-stable.tar.gz
+      echo "Done"
+
+      # Make
+      echo -n "Compiling Redis (takes about 5 mins): "
+      cd redis-stable
+      if make -j`nproc` &> /dev/null; then
+          echo "Done"
+      else
+          echo "Failed!"
+          exit 1
+      fi
+
+      # Install and Clean-up
+      echo -n "Installing Redis: "
+      mv src/redis-server ../
+      mv src/redis-cli ../
+      cd ..
+      rm -rf redis-stable*
+      echo "Done"
+  else
+      echo "Redis is installed!"
+  fi
+#+end_src
+
+
+#+RESULTS:
+: Redis is installed!
+
+** Using Redis as Session Storage
+
+First, we install the node redis client and the session storage package. We use
+an old version of node-redis because v4.0 introduced too many breaking changes
+and connect-redis hasn't yet updated (as of 2022-01-24).
+
+#+begin_src bash
+  npm install redis@3.1.2 connect-redis
+#+end_src
+
+#+RESULTS:
+:
+: added 2 packages, removed 8 packages, changed 1 package, and audited 63 packages in 3s
+:
+: 3 packages are looking for funding
+:   run `npm fund` for details
+:
+: found 0 vulnerabilities
+
+Now let's change the dynamic sessions app we had created before. First, we
+include the packages we just installed:
+
+#+begin_src javascript :tangle sessions/03-dynamic-redis.js :eval no
+  const express = require('express')
+  const session = require('express-session')
+  const redis = require('redis')
+  const connectRedis = require('connect-redis')
+
+  const app = express()
+  const port = 3000
+#+end_src
+
+Now we need to configure the redis store and client, and add some basic logging.
+We also track if the redis client is connected to a server or not, which will
+help us not block on unavailable reads later on.
+
+#+begin_src javascript :tangle sessions/03-dynamic-redis.js :eval no
+  const redisStore = connectRedis(session)
+  const redisClient = redis.createClient()
+
+  let redisClient_isActive = false;
+
+  redisClient.on('error', (err) => {
+      console.log('Could not establish a connection with redis. ' + err)
+      redisClient_isActive = false
+  })
+  redisClient.on('ready', (err) => {
+      console.log('Connected to redis successfully')
+      redisClient_isActive = true;
+  })
+  #+end_src
+
+Time to add it to our session options.
+
+  #+begin_src javascript :tangle sessions/03-dynamic-redis.js :eval no
+    var session_options = {
+        secret: "some_randomly_generated_string_here!",
+        store: new redisStore({
+            client: redisClient,
+            prefix: "dynamic-sessions-redis: ",
+        }),
+        cookie: {
+            secure: "auto",
+            maxAge: 15000
+        },
+        resave: false,
+        saveUninitialized: false,
+        rolling: false,
+    }
+
+    app.use(session(session_options))
+#+end_src
+
+That's mostly it. We have a couple of checks for ~redisClient_isActive~ but
+otherwise the code is oblivious to this change.
+
+#+begin_src javascript :tangle sessions/03-dynamic-redis.js :eval no
+  app.get('/', (req, res) => {
+      res.setHeader('Content-Type', 'text/html')
+      var response_html =
+          "<h1>Hello World!</h1>" +
+          "<hr>"
+
+      if (!redisClient_isActive) {
+          response_html +=
+              "<p>Session Storage is not available, check if the Redis server is running!</p>"
+          res.write(response_html)
+          res.end()
+
+          return
+      }
+
+      if (!req.session.initialized) {
+          response_html +=
+              "<p>You are logged out!</p>" +
+              "<form action='/' method='post'>" +
+              "<input type='submit' name='login' value='LOG IN'/>" +
+              "</form>"
+      } else {
+          var ms_to_expiry = req.session.original_expiry - Date.now()
+          response_html +=
+              "<p>You are logged in!</p>" +
+              "<ul>" +
+              "<li>session_id: " + req.session.id + "</li>" +
+              "<li>expiry: " + ms_to_expiry/1000 + "s (" + req.session.original_expiry_str + ") </li>" +
+              "</ul>" +
+              "<form action='/' method='post'>" +
+              "<input type='submit' value='REFRESH PAGE'/></br>" +
+              "<input type='submit' name='refresh' value='REFRESH EXPIRY'/></br></br></br>" +
+              "<input type='submit' name='logout' value='LOG OUT'/>" +
+              "</form>"
+      }
+
+      res.write(response_html)
+      res.end()
+  })
+
+  app.use(express.json()) // for parsing application/json
+  app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
+
+  app.post('/', (req, res) => {
+      if (!redisClient_isActive) {
+          res.redirect('/')
+          res.end()
+          return
+      }
+
+      if (req.body.login) {
+          if (req.session.initialized) {
+              console.log("ERROR: login after being initialized!")
+          }
+          req.session.initialized = true
+          req.session.original_expiry = Date.parse(req.session.cookie.expires)
+          req.session.original_expiry_str = new Date(req.session.original_expiry).toLocaleString("en-GB")
+          req.session.refresh_flag = false
+      } else if (req.body.logout) {
+          req.session.regenerate((err) => { } )
+      } else if (req.body.refresh) {
+          req.session.refresh_flag = !req.session.refresh_flag
+          req.session.original_expiry = Date.now() + req.session.cookie.originalMaxAge
+          req.session.original_expiry_str = new Date(req.session.original_expiry).toLocaleString("en-GB")
+      }
+
+      res.redirect('/')
+      res.end()
+  })
+
+  app.listen(port, () => {
+      console.log(`Dynamic Sessions app listening at http://localhost:${port}`)
+  })
+#+end_src
+
+Time to start the server.
+
+#+begin_src bash :eval no
+  echo -n "Starting redis: "
+
+  ./redis/redis-server &>/dev/null &
+  redis_pid="$!"
+
+  if ! [ -z "$redis_pid" ]; then
+      echo "Started redis with PID $redis_pid"
+  else
+      echo "Could not start redis!"
+      exit 1
+  fi
+
+  echo -n "Starting server: "
+
+  node sessions/03-dynamic-redis.js &>/dev/null &
+  node_pid="$!"
+
+  if ! [ -z "$node_pid" ]; then
+      echo "Started node with PID $node_pid! Please open localhost:3000 in your browser."
+      echo -n "Exit server: Press <enter> to exit... "
+      read
+      kill $node_pid
+      kill $redis_pid
+  else
+      echo "Could not start server!"
+      exit 1
+  fi
+#+end_src

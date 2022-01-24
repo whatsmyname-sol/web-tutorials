@@ -25,7 +25,7 @@ app.get('/', (req, res) => {
 
     // if you don't do this, client-side cookies will expire too soon!
     // basically, you need any change to req.session to refresh cookies client-side.
-    req.session.initialized++ 
+    req.session.initialized++
 
     res.write('session_id: ' + req.session.id + '\n')
     res.write('expires in: ' + (req.session.cookie.maxAge / 1000) + 's\n')
