@@ -18,7 +18,6 @@ Some references which are helpful:
  - [[https://discord.com/developers/docs/topics/oauth2][Discord Docs for OAuth2]]
  - [[https://discordjs.guide/oauth2/][discordjs tutorial (primary reference)]]
 
-
 * Discord Applications
 :PROPERTIES:
 :header-args: :results output verbatim
@@ -421,6 +420,270 @@ Finally, the server.
   echo -n "Starting server: "
 
   node src/implicit/server.js & &>/dev/null
+  node_pid="$!"
+
+  if ! [ -z "$node_pid" ]; then
+      echo "Started node with PID $node_pid! Please open localhost:3000 in your browser."
+      echo -n "Exit server: Press <enter> to exit... "
+      read
+      kill $node_pid
+  else
+      echo "Could not start server!"
+      exit 1
+  fi
+#+end_src
+
+* Authorization Code Grant Flow
+:PROPERTIES:
+:header-args: :results output verbatim
+:header-args+: :tangle oauth_auth.sh :mkdirp yes
+:END:
+
+As compared to the access tokens we were fetching earlier, an ~access code~ will
+let the server request more access tokens even after one expires. In terms of
+implementation, now we'll be using sessions and associating these codes to
+specific sessions server-side.
+
+** Webserver
+
+Let install the dependencies and copy over a basic version of the server we were
+using in the previous tutorial (with session support).
+
+#+begin_src bash
+  npm install express express-session
+#+end_src
+
+#+RESULTS:
+:
+: up to date, audited 71 packages in 1s
+:
+: 2 packages are looking for funding
+:   run `npm fund` for details
+:
+: found 0 vulnerabilities
+
+We'll be using the ~discord-oauth2~ package to manage this on the server-side.
+Instead of generating the state via the ~crypto~ package, we'll just reuse the
+session ID.
+
+Saving the access code on a cookie client-side is not particularly helpful: once
+you ask for an access token, the Discord API will only accept the corresponding
+refresh token. You could maintain this whole state in a cookie, but that's too
+much work.
+
+#+begin_src bash
+  npm install discord-oauth2
+#+end_src
+
+#+RESULTS:
+:
+: added 1 package, and audited 73 packages in 3s
+:
+: 2 packages are looking for funding
+:   run `npm fund` for details
+:
+: found 0 vulnerabilities
+
+#+begin_src javascript :tangle src/auth/server.js :noweb tangle
+  const express = require('express')
+  const session = require('express-session')
+  const discordOAuth2 = require('discord-oauth2')
+
+  const app = express()
+  const port = 3000
+
+  var session_options = {
+      secret: "some_randomly_generated_string_here!",
+      cookie: {
+          secure: "auto",
+          maxAge: 1 * 60 * 1000, // 1 minute
+      },
+      resave: false,
+      saveUninitialized: true,
+      rolling: true,
+  }
+
+  app.use(session(session_options))
+
+  app.set('view engine', 'ejs')
+  app.set('views', __dirname + '/views')
+
+  const { clientId, clientSecret } = require('../../config.json')
+  const oauth = new discordOAuth2({
+      clientId: clientId,
+      clientSecret: clientSecret,
+      redirectUri: `http://localhost:${port}/`,
+  })
+
+  app.get('/', (req, res) => {
+      <<server-handle-code>>
+
+      <<server-handle-error>>
+
+      if (!req.session.access || !req.session.access.code) {
+          let oauthURL = oauth.generateAuthUrl({
+              prompt: 'none',
+              scope: ['identify'],
+              state: req.session.id
+          })
+          res.render('login', { oauthURL : oauthURL } )
+      } else {
+          <<server-handle-token>>
+      }
+  })
+
+  <<server-handle-logout>>
+
+  app.listen(port, () => {
+      console.log(`Authorization Code Grant Flow app listening at http://localhost:${port}`)
+  })
+#+end_src
+
+The login page can be pretty simple.
+
+#+begin_src html :tangle src/auth/views/login.ejs
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <title>Login through Discord</title>
+    </head>
+    <body>
+      <p>You are currently <b>logged out</b>!</br></br>
+        <button type="button" onclick="location.href='<%= oauthURL %>'">
+          Log in to Discord!
+        </button>
+    </body>
+  </html>
+#+end_src
+
+If we get a ~code~ query string back, let's save it with the session.
+
+#+name: server-handle-code
+#+begin_src javascript
+  if (req.query.code) {
+      if (req.query.state != req.session.id) {
+          console.error("State does not match Session ID!")
+      } else {
+          req.session.access = { code: req.query.code }
+          req.session.cookie.maxAge = 1 * 365 * 24 * 60 * 60 * 1000 // 1 year
+      }
+      res.redirect('/')
+      return
+  }
+#+end_src
+
+We might also get errors back, but for now let's just log and redirect back.
+
+#+name: server-handle-error
+#+begin_src javascript
+  if (req.query.error) {
+      console.error(`${req.query.error}: ${req.query.error_description}`)
+      res.redirect('/')
+      return
+  }
+#+end_src
+
+What do we do when we get a access code? We ask Discord for an access token.
+This token also has an expiration time, so we should check that too.
+
+#+name: server-handle-token
+#+begin_src javascript
+  let tokenRequest = null
+
+  if (!req.session.access.token) {
+      tokenRequest = {
+          code: req.session.access.code,
+          scope: 'identify',
+          grantType: 'authorization_code'
+      }
+      console.log(`${req.session.id}: requesting access token via access code`)
+  } else if (req.session.access.token_expiry < (new Date()).getTime()) {
+      console.log(`${req.session.id}: requesting access token with refresh token`)
+      tokenRequest = {
+          refreshToken: req.session.access.refresh_token,
+          scope: 'identify',
+          grantType: 'refresh_token'
+      }
+  }
+
+  if (tokenRequest) {
+      oauth.tokenRequest(tokenRequest)
+          .then(tokenRes => {
+              req.session.access.token = tokenRes['access_token']
+              req.session.access.refresh_token = tokenRes['refresh_token']
+              req.session.access.token_expiry = (new Date()).getTime() + (15 * 1000)
+              // req.session.access.token_expiry = (new Date()).getTime() + (tokenRes['expires_in'] * 1000)
+
+              console.log(`${req.session.id}: received access token`)
+              console.log(req.session.access)
+          })
+          .catch(err => {
+              console.error(err.message)
+              console.error(err.response)
+
+              req.session.access = null
+              res.clearCookie('discord.oauth.code')
+          })
+          .then(() => {
+              res.redirect('/')
+              res.end()
+          })
+  } else {
+      oauth.getUser(req.session.access.token)
+          .then(response => {
+              console.log(response)
+              res.render('profile', response)
+          })
+          .catch(err => {
+              console.log(err.response)
+              res.end()
+          })
+  }
+#+end_src
+
+The profile page can be pretty simple like before.
+
+#+begin_src html :tangle src/auth/views/profile.ejs
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <title>Login through Discord</title>
+    </head>
+    <body>
+      <p>You are currently <b>logged in</b> as <%= username %>#<%= discriminator %>!</p>
+      <form action='/' method='post'>
+        <input type='submit' name='logout' value='Log out!'/>
+      </form>
+    </body>
+  </html>
+#+end_src
+
+Finally, let's handle the POST request to log out from the session.
+
+#+name: server-handle-logout
+#+begin_src javascript
+  app.use(express.json()) // for parsing application/json
+  app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
+
+  app.post('/', (req, res) => {
+      if (req.body.logout) {
+          req.session.access = null
+          req.session.destroy(console.error)
+      }
+      res.redirect('/')
+      res.end()
+  })
+#+end_src
+
+
+** Running the server
+
+Finally, the server.
+
+#+begin_src bash :eval no
+  echo -n "Starting server: "
+
+  node src/auth/server.js & &>/dev/null
   node_pid="$!"
 
   if ! [ -z "$node_pid" ]; then
