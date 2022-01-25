@@ -526,7 +526,7 @@ much work.
               scope: ['identify'],
               state: req.session.id
           })
-          res.render('login', { oauthURL : oauthURL } )
+          res.render('login', { oauthURL : oauthURL })
       } else {
           <<server-handle-token>>
       }

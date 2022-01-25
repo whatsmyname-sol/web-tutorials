@@ -52,7 +52,7 @@ app.get('/', (req, res) => {
             scope: ['identify'],
             state: req.session.id
         })
-        res.render('login', { oauthURL : oauthURL } )
+        res.render('login', { oauthURL : oauthURL })
     } else {
         let tokenRequest = null
         
