@@ -1,0 +1,46 @@
+#+title: React Applications
+#+author: whatsmyname
+#+date: today
+
+* Introduction
+
+* Environment
+
+#+begin_src bash
+  npm install create-react-app
+  npm init react-app 01-tutorial
+#+end_src
+
+#+begin_src bash
+  cd 01-tutorial
+  npm start
+#+end_src
+
+Suffix script.start with "BROWSER=none".
+
+For LSP:
+
+Global:
+
+#+begin_src bash
+  npm install -g eslint
+  npm install -g import-js
+  npm install -g typescript typescript-language-server
+  npm install -g js-beautify
+#+end_src
+
+#+begin_src bash
+  git clone https://github.com/microsoft/vscode-eslint
+  cd vscode-eslint
+  npm install
+  npm run compile
+#+end_src
+
+Local:
+
+#+begin_src bash
+  npm init @eslint/config
+#+end_src
+
+Read and do: https://reactjs.org/tutorial/tutorial.html
+Read: https://developer.mozilla.org/en-US/docs/Web/JavaScript/A_re-introduction_to_JavaScript
