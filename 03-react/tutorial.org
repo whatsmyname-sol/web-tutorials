@@ -42,5 +42,10 @@ Local:
   npm init @eslint/config
 #+end_src
 
+* React
+
 Read and do: https://reactjs.org/tutorial/tutorial.html
 Read: https://developer.mozilla.org/en-US/docs/Web/JavaScript/A_re-introduction_to_JavaScript
+
+Read: https://reactjs.org/docs/hello-world.html
+The ~02-guide/src/index.js~ implements a lot of concepts in the guide.
