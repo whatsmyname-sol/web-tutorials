@@ -1,19 +1,25 @@
+/* eslint-disable react/prefer-stateless-function */
 /* eslint-disable react/prop-types */
 import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
 
 function helloWorld() {
-  return (<h1>Hello, World!</h1>);
+  return <h1>Hello, World!</h1>;
 }
 
 function welcomeUser(props) {
-  return (<h2>Welcome {props.name}!</h2>);
+  return (
+    <h2>
+      Welcome
+      {' '}
+      {props.name}
+      !
+    </h2>
+  );
 }
 
 class Line extends React.Component {
   render() {
-    return (<hr />);
+    return <hr />;
   }
 }
 
@@ -30,7 +36,8 @@ class Clock extends React.Component {
       () => this.setState({
         time: new Date(),
       }),
-      1000);
+      1000,
+    );
   }
 
   componentWillUnmount() {
@@ -38,10 +45,14 @@ class Clock extends React.Component {
   }
 
   render() {
+    const { time } = this.state;
     return (
-      <p>Current time is: {' '}
-        {this.state.time.toLocaleTimeString()}
-      </p>);
+      <p>
+        Current time is:
+        {' '}
+        {time.toLocaleTimeString()}
+      </p>
+    );
   }
 }
 
@@ -55,16 +66,20 @@ class Toggle extends React.Component {
 
   // See: https://babeljs.io/docs/en/babel-plugin-proposal-class-properties
   handleClick = () => {
+    const { isToggleOn } = this.state;
     this.setState({
-      isToggleOn: !this.state.isToggleOn,
-    })
-  }
+      isToggleOn: !isToggleOn,
+    });
+  };
 
   render() {
+    const { isToggleOn } = this.state;
     return (
-      <p>Press the button to toggle state: {' '}
-        <button onClick={this.handleClick}>
-          {this.state.isToggleOn ? 'ON' : 'OFF'}
+      <p>
+        Press the button to toggle state:
+        {' '}
+        <button type="button" onClick={this.handleClick}>
+          {isToggleOn ? 'ON' : 'OFF'}
         </button>
       </p>
     );
@@ -77,25 +92,26 @@ class List extends React.Component {
     this.state = {
       list: [],
       nextEntry: '',
-    }
+    };
   }
 
   handleChange = (e) => {
     this.setState({
       nextEntry: e.target.value,
-    })
-  }
+    });
+  };
 
   handleSubmit = (e) => {
-    const entry = this.state.nextEntry;
-    if (entry !== '') {
+    const { nextEntry, list } = this.state;
+    if (nextEntry !== '') {
       this.setState({
-        list: this.state.list.concat([entry]),
+        list: list.concat([nextEntry]),
         nextEntry: '',
       });
     }
+
     e.preventDefault();
-  }
+  };
 
   handleSubmitClear = (e) => {
     this.setState({
@@ -103,29 +119,44 @@ class List extends React.Component {
       nextEntry: '',
     });
     e.preventDefault();
-  }
+  };
 
   render() {
-    const list = this.state.list;
-    const listElements = list.map((e, i) => {
-      return (<p key={i}>#{i}: {e}</p>);
-    });
+    const { nextEntry, list } = this.state;
+    const listElements = list.map((e, i) => (
+      <p key={i}>
+        #
+        {i}
+        :
+        {e}
+      </p>
+    ));
 
     return (
-      <div style={{ border: "dotted", marginTop: "10px", display: "inline-block", padding: "10px" }}>
+      <div
+        style={{
+          border: 'dotted',
+          marginTop: '10px',
+          display: 'inline-block',
+          padding: '10px',
+        }}
+      >
         <p>List of Items:</p>
         {listElements}
         <form onSubmit={this.handleSubmit}>
           <label>
-            New Entry: {' '}
-            <input type="text" value={this.state.nextEntry} onChange={this.handleChange} />
+            New Entry:
+            {' '}
+            <input
+              type="text"
+              value={nextEntry}
+              onChange={this.handleChange}
+            />
           </label>
           <input type="submit" value="Submit" />
         </form>
         <form onSubmit={this.handleSubmitClear}>
-          <label>
-            Clear list: {' '}
-          </label>
+          <label>Clear list: </label>
           <input type="submit" value="Clear!" />
         </form>
       </div>
@@ -134,27 +165,22 @@ class List extends React.Component {
 }
 
 function Greeting(props) {
-  const isLoggedIn = props.isLoggedIn;
+  const { isLoggedIn } = props;
   if (isLoggedIn) {
     return <h1>Welcome back!</h1>;
   }
+
   return <h1>Please sign up.</h1>;
 }
 
 function LoginButton(props) {
-  return (
-    <button onClick={props.onClick}>
-      Login
-    </button>
-  );
+  const { onClick } = props;
+  return <button type="button" onClick={onClick}>Login</button>;
 }
 
 function LogoutButton(props) {
-  return (
-    <button onClick={props.onClick}>
-      Logout
-    </button>
-  );
+  const { onClick } = props;
+  return <button type="button" onClick={onClick}>Logout</button>;
 }
 
 class LoginControl extends React.Component {
@@ -174,7 +200,7 @@ class LoginControl extends React.Component {
   }
 
   render() {
-    const isLoggedIn = this.state.isLoggedIn;
+    const { isLoggedIn } = this.state;
     let button;
     if (isLoggedIn) {
       button = <LogoutButton onClick={this.handleLogoutClick} />;
@@ -193,12 +219,9 @@ class LoginControl extends React.Component {
 
 class ControlledText extends React.Component {
   render() {
-    const text = this.props.value;
-    const handleChange = this.props.onChange;
+    const { value, onChange } = this.props;
 
-    return (
-      <input type="text" value={text} onChange={handleChange} />
-    );
+    return <input type="text" value={value} onChange={onChange} />;
   }
 }
 
@@ -207,7 +230,7 @@ class SynchronizedText extends React.Component {
     super(props);
     this.state = {
       text: '',
-    }
+    };
   }
 
   handleChange = (e) => {
@@ -215,26 +238,36 @@ class SynchronizedText extends React.Component {
       text: e.target.value,
     });
     e.preventDefault();
-  }
+  };
 
-  render () {
-    const text = this.state.text;
+  render() {
+    const { text } = this.state;
 
     return (
       <div>
         <p>These inputs are synchronized: </p>
-        <ControlledText value={text} onChange={this.handleChange} /><br />
-        <ControlledText value={text} onChange={this.handleChange} /><br/>
-        <ControlledText value={text} onChange={this.handleChange} /><br />
+        <ControlledText value={text} onChange={this.handleChange} />
+        <br />
+        <ControlledText value={text} onChange={this.handleChange} />
+        <br />
+        <ControlledText value={text} onChange={this.handleChange} />
+        <br />
       </div>
     );
   }
 }
 
-function ExampleDotCom(props) {
+function ExampleDotCom() {
   return (
-    <button onClick={() => {window.location = "https://example.com"}}>
-      Go to {"example.com"}
+    <button
+      type="button"
+      onClick={() => {
+        window.location = 'https://example.com';
+      }}
+    >
+      Go to
+      {' '}
+      example.com
     </button>
   );
 }
@@ -246,26 +279,30 @@ class URLHash extends React.Component {
       hash: window.location.hash,
     };
 
-    window.addEventListener('hashchange', () =>
-      this.setState({hash: window.location.hash})
-    );
+    window.addEventListener('hashchange', () => this.setState({ hash: window.location.hash }));
   }
 
   render() {
-    const params = new URLSearchParams(this.state.hash.slice(1));
+    const { hash } = this.state;
+    const params = new URLSearchParams(hash.slice(1));
 
-    let paramsList = [];
-    for (let [key, value] of params) {
+    const paramsList = [];
+    params.forEach((value, key) => {
       paramsList.push((
-        <p key={key}><b>{key}</b>: {value}</p>
-      ))
-    }
+        <p key={key}>
+          <b>{key}</b>
+          :
+          {value}
+        </p>
+      ));
+    });
 
     return (
       <div>
         <h3>List of hash parameters: </h3>
         {paramsList}
-      </div>);
+      </div>
+    );
   }
 }
 
@@ -273,7 +310,7 @@ function App() {
   return (
     <div>
       {helloWorld()}
-      {welcomeUser({ name: "whatsmyname" })}
+      {welcomeUser({ name: 'whatsmyname' })}
       <Line />
       <Clock />
       <Toggle />
@@ -283,12 +320,10 @@ function App() {
       <SynchronizedText />
       <Line />
       <ExampleDotCom />
+      <Line />
       <URLHash />
     </div>
   );
 }
 
-ReactDOM.render(
-  <App />,
-  document.getElementById('root'),
-);
+export default App;
